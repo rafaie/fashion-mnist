@@ -74,7 +74,7 @@ class BaseConfig(Bunch):
 
         # config for `tf.Session`, ref: `tf.ConfigProto`
         self.sess_config = tf.ConfigProto()
-        self.sess_config.gpu_options.per_process_gpu_memory_fraction = 0.5
+        # self.sess_config.gpu_options.per_process_gpu_memory_fraction = 0.5
         self.sess_config.log_device_placement = True
         self.sess_config.allow_soft_placement = True
 

@@ -121,7 +121,7 @@ class BaseModel(object):
         mode = self.ModeKeys.TRAIN
 
         with tf.Graph().as_default() as g:
-            global_step_tensor = tf.train.create_global_step(g)
+            global_step_tensor = tf.train.create_global_step()
             self._log_tensors['step'] = global_step_tensor
 
             features, labels = self._load_dataset(dataset, mode)
@@ -147,8 +147,9 @@ class BaseModel(object):
 
         latest_ckpt = tf.train.latest_checkpoint(self.config.ckpt_dir)
         assert latest_ckpt is not None, "There is no trained model in {}".format(self.config.ckpt_dir)
-
-        with tf.Graph().as_default() as g:
+        
+        g1 = tf.Graph()
+        with g1.as_default() as g:
             global_step_tensor = tf.train.create_global_step(g)
 
             # tf.logging.info('Evaluate the model (global_step = {})'.format(self.get_global_step()))
@@ -256,7 +257,7 @@ class BaseModel(object):
             ckpt_reader = tf.train.NewCheckpointReader(
                 tf.train.latest_checkpoint(self.config.ckpt_dir))
             return ckpt_reader.get_tensor(tf.GraphKeys.GLOBAL_STEP)
-        except tf.errors.UnknownError:
+        except:
             return 0
 
     def _load_dataset(self, dataset, mode):
