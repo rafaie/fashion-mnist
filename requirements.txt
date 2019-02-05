@@ -1,6 +1,6 @@
 numpy
-sklearn
 tensorflow
 # if there is GPU available 
 #tensorflow-gpu
-tensorflow_estimator
+#tensorflow_estimator
+huaytools
