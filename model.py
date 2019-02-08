@@ -28,16 +28,28 @@ class model(BaseModel):
         self.stop_if_no_increase_hook_run_every_secs = 120
 
     def model_fn(self, features, labels, mode):
-        hidden = tf.layers.dense(features,
+        input_layer = tf.divide(features, tf.constant(255, tf.float64),
+                                name='input_layer')
+        hidden = tf.layers.dense(input_layer,
                                 784,
-                                kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                # kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                # bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
                                 activation=tf.nn.relu,
                                 name='hidden_layer')
-        output = tf.layers.dense(hidden,
-                                10,
+        hidden2 = tf.layers.dense(hidden,
+                                128,
                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
                                 bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                name='hidden_layer2')
+        hidden3 = tf.layers.dense(hidden2,
+                                128,
+                                kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                name='hidden_layer3')
+        output = tf.layers.dense(hidden3,
+                                10,
+                                # kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                # bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
                                 name='output_layer')
         tf.identity(output, name='model_output')
 
