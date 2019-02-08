@@ -18,7 +18,14 @@ class model(BaseModel):
         self.config.n_epoch_train = 1
         self.config.n_epoch_eval = 1
         self.config.max_steps = 10000
-
+        self.shuffle_and_repeat = True
+        self.n_batch_train = 25  # for train
+        self.n_epoch_train = 25  # for train
+ 
+        self.save_checkpoints_secs = 120
+        self.stop_if_no_increase_hook_max_steps_without_increase = 50
+        self.stop_if_no_increase_hook_min_steps = 5000
+        self.stop_if_no_increase_hook_run_every_secs = 120
 
     def model_fn(self, features, labels, mode):
         hidden = tf.layers.dense(features,
@@ -66,8 +73,7 @@ class model(BaseModel):
         hook1 = tf.contrib.estimator.stop_if_no_increase_hook(
             estimator, "f_" + self.config.name, 
             max_steps_without_increase=self.config.stop_if_no_increase_hook_max_steps_without_increase, 
-            min_steps = self.config.stop_if_no_increase_hook_min_steps, 
-            run_every_secs = self.config.stop_if_no_increase_hook_run_every_secs)
+            min_steps = self.config.stop_if_no_increase_hook_min_steps)
 
         return [hook1]
 

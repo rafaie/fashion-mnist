@@ -33,11 +33,11 @@ if __name__ == "__main__":
     tf.logging.set_verbosity(tf.logging.INFO)
 
     # Create datasets
-    ds_train, ds_valid, ds_test, ds_pred = get_dataset(args.data_dir)    
+    ds_train, ds_valid, ds_test, ds_pred = get_dataset(args.data_dir, test_size = 0.2, valid_size = 0.001)
 
     # load model class by class file name
     ModelClass = my_import(args.model_class + ".model")
     model = ModelClass()
 
-    model.train_and_evaluate(ds_train, ds_valid)
+    model.train_and_evaluate(ds_train, ds_test)
 
