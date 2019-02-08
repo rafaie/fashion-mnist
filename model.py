@@ -61,3 +61,13 @@ class model(BaseModel):
 
         # if mode == tf.estimator.ModeKeys.TRAIN:
         #     return [self._train_op, self._loss, self._accuracy]
+
+    def get_hooks(self, estimator):
+        hook1 = tf.contrib.estimator.stop_if_no_increase_hook(
+            estimator, "f_" + self.config.name, 
+            max_steps_without_increase=self.config.stop_if_no_increase_hook_max_steps_without_increase, 
+            min_steps = self.config.stop_if_no_increase_hook_min_steps, 
+            run_every_secs = self.config.stop_if_no_increase_hook_run_every_secs)
+
+        return [hook1]
+

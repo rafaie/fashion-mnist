@@ -34,15 +34,6 @@ class BaseModel(object):
         return ds_iter.get_next()
 
 
-    def get_hooks(self, estimator):
-        hook1 = tf.contrib.estimator.stop_if_no_increase_hook(
-            estimator, "f_" + self.config.name, 
-            max_steps_without_increase=self.config.stop_if_no_increase_hook_max_steps_without_increase, 
-            min_steps = self.config.stop_if_no_increase_hook_min_steps, 
-            run_every_secs = self.config.stop_if_no_increase_hook_run_every_secs)
-
-        return [hook1]
-
 
     def train_and_evaluate(self, ds_train, ds_valid):
 
@@ -56,8 +47,8 @@ class BaseModel(object):
         eval_spec = tf.estimator.EvalSpec(input_fn=it_valid, throttle_secs=self.config.train_throttle_secs)
         tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
-    def train_and_evaluate(self, ds_train):
-
+    def predict(self, ds):
+        pass
 
     def init_config(self,):
         raise NotImplementedError
@@ -65,4 +56,6 @@ class BaseModel(object):
     def model_fn(self, features, labels, mode):
         raise NotImplementedError
 
-    
+    def get_hooks(self, estimator):
+        raise NotImplementedError
+
