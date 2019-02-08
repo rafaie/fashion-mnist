@@ -13,7 +13,6 @@ def get_data(data_dir='.data/', test_size = 0.2, valid_size = 0.15):
     images = np.load(os.path.join(data_dir, 'fmnist_train_data.npy'))
     labels_tmp = np.load(os.path.join(data_dir, 'fmnist_train_labels.npy'))
     labels = labels_tmp.astype(np.int64)
-    print(labels[:100])
 
     s = images.shape[0]
 
