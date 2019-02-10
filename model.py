@@ -97,7 +97,7 @@ class FashionMnist:
             self.learning_rate = 0.001
         else:
             self.model = self.models[0]
-            self.dropout_factor = 0.25
+            self.dropout_factor = 0.5
             self.learning_rate = 0.001
 
 
