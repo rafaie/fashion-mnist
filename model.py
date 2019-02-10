@@ -1,91 +1,169 @@
-"""
-model.py: the sample model class
+import argparse
+import os
 
-"""
-
-
+import numpy as np
 import tensorflow as tf
-from base_model import BaseModel
-from base_config import BaseConfig
+from util import get_data2, get_dataset
 
-tf.logging.set_verbosity(tf.logging.INFO)
+class FashionMnist:
+    def __init__(self, data_dir, batch_size):
+        self.data_dir = data_dir
+        self.batch_size = batch_size
+        (self.train_images, self.train_labels,
+         self.valid_images, self.valid_labels,
+         self.test_images, self.test_labels) = get_data2(data_dir, test_size=0.15, 
+                                                        valid_size=0.20, need_valid=True)
+
+        self.models=[self.create_model_0]
+        self.model = None
+
+    def show_dataset_size(self):
+        print('-----------------------------------------------')
+        print('self.train_images:', self.train_images.shape)
+        print('self.train_labels:', self.train_labels.shape)
+        print('self.valid_images:', self.valid_images.shape)
+        print('self.valid_labels:', self.valid_labels.shape)
+        print('self.test_images:', self.test_images.shape)
+        print('self.test_labels:', self.test_labels.shape)
+
+    def create_model_0(self):
+        tf.reset_default_graph()
+
+        # specify the network
+        x = tf.placeholder(tf.float32, [None, 784], name='input_placeholder')
+        with tf.name_scope('linear_model'):
+            norm  = tf.divide(x, tf.constant(255, tf.float32),
+                                name='norm')
+            drop = tf.layers.dropout(norm, rate=self.dropout_factor)                    
+            hidden = tf.layers.dense(drop,
+                                    1500,
+                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                    activation=tf.nn.relu,
+                                    name='hidden_layer2')
+            hidden2 = tf.layers.dense(hidden,
+                                    1000,
+                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                    activation=tf.nn.relu,
+                                    name='hidden_layer3')
+            hidden3 = tf.layers.dense(hidden2,
+                                    500,
+                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                    activation=tf.nn.relu,
+                                    name='hidden_layer4')
+    
+            output = tf.layers.dense(hidden3,
+                                    10,
+                                    name='output')
+            tf.identity(output, name='output')
+        
+        # define classification loss
+        y = tf.placeholder(tf.float32, [None, 10], name='label')
+        total_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=y, logits=output)
+        return (output, total_loss, x, y)
+
+        
 
 
-class model(BaseModel):
+    def evaluate(self, test_images, test_labels, confusion_matrix_op, total_loss, output, session,
+                 x, y, batch_size, test_num_examples):
+        ce_vals = []
+        conf_mxs = []
 
-    def init_config(self):
-        self.config = BaseConfig('model')
-        self.config.n_epoch_train = 1
-        self.config.n_epoch_eval = 1
-        self.config.max_steps = 10000
-        self.shuffle_and_repeat = True
-        self.n_batch_train = 25  # for train
-        self.n_epoch_train = 25  # for train
- 
-        self.save_checkpoints_secs = 120
-        self.stop_if_no_increase_hook_max_steps_without_increase = 50
-        self.stop_if_no_increase_hook_min_steps = 5000
-        self.stop_if_no_increase_hook_run_every_secs = 120
+        c_pred = tf.cast(tf.equal(tf.argmax(y, axis=1), 
+                                    tf.argmax(output, axis=1)), tf.int32)
+        c_preds = []
+        for i in range(test_num_examples // batch_size):
+            batch_xs = test_images[i * batch_size:(i + 1) * batch_size, :]
+            batch_ys = test_labels[i * batch_size:(i + 1) * batch_size, :]
+            test_ce, conf_matrix, c_pred_val= session.run(
+                [tf.reduce_mean(total_loss), confusion_matrix_op, c_pred], {
+                    x: batch_xs,
+                    y: batch_ys
+                })
+            ce_vals.append(test_ce)
+            conf_mxs.append(conf_matrix)
+            c_preds += c_pred_val.tolist()
+        return (ce_vals, conf_mxs, sum(c_preds)/len(c_preds))
+        
 
-    def model_fn(self, features, labels, mode):
-        input_layer = tf.divide(features, tf.constant(255, tf.float64),
-                                name='input_layer')
-        hidden = tf.layers.dense(input_layer,
-                                784,
-                                # kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                # bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                activation=tf.nn.relu,
-                                name='hidden_layer')
-        hidden2 = tf.layers.dense(hidden,
-                                128,
-                                kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                name='hidden_layer2')
-        hidden3 = tf.layers.dense(hidden2,
-                                128,
-                                kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                name='hidden_layer3')
-        output = tf.layers.dense(hidden3,
-                                10,
-                                # kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                # bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                name='output_layer')
-        tf.identity(output, name='model_output')
+    def update_model_info(self, model_id=0):
+        self.episode = 10
+        if model_id == 1:
+            self.model = self.models[0]
+            self.dropout_factor = 0.25
+            self.learning_rate = 0.001
+        else:
+            self.model = self.models[0]
+            self.dropout_factor = 0.25
+            self.learning_rate = 0.001
 
-        # The out of model which has not been softmax
-        self._logits = output #tf.layers.dense(inputs=dropout, units=10)
-        self._predictions = tf.argmax(self._logits, axis=1)
 
-        # if mode == tf.estimator.ModeKeys.PREDICT:
-        #     # return self._predictions
-        #     return {'predictions': self._predictions,
-        #             'probability': tf.nn.softmax(self._logits)}
 
-        loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=self._logits)
-        metrics = {
-            'acc': tf.metrics.accuracy(labels, self._predictions)
-        }
+    def train(self, model_id=0):
+        self.update_model_info(model_id)
+        train_num_examples = self.train_images.shape[0]
+        valid_num_examples = self.valid_images.shape[0]
+        test_num_examples = self.test_images.shape[0]
 
-        if mode == tf.estimator.ModeKeys.EVAL:
-            return tf.estimator.EstimatorSpec(
-                mode, loss=loss, eval_metric_ops=metrics)
-        elif mode == tf.estimator.ModeKeys.TRAIN:
-            train_op = tf.train.AdamOptimizer(self.config.learning_rate).minimize(
-                loss, global_step=tf.train.get_or_create_global_step())
-            return tf.estimator.EstimatorSpec(mode, loss=loss, train_op=train_op)
+        output, total_loss, x, y = self.model()
 
-        # self._train_op = tf.train.AdamOptimizer(self.config.learning_rate).minimize(
-        #     self._loss, global_step=tf.train.get_global_step())
+        confusion_matrix_op = tf.confusion_matrix(tf.argmax(y, axis=1), 
+                                                  tf.argmax(output, axis=1), num_classes=10)
 
-        # if mode == tf.estimator.ModeKeys.TRAIN:
-        #     return [self._train_op, self._loss, self._accuracy]
+        # set up training and saving functionality
+        global_step_tensor = tf.get_variable(
+            'global_step', trainable=False, shape=[], initializer=tf.zeros_initializer)
+        optimizer = tf.train.AdamOptimizer(self.learning_rate)
+        train_op = optimizer.minimize(total_loss, global_step=global_step_tensor)
+        saver = tf.train.Saver()
 
-    def get_hooks(self, estimator):
-        hook1 = tf.contrib.estimator.stop_if_no_increase_hook(
-            estimator, "f_" + self.config.name, 
-            max_steps_without_increase=self.config.stop_if_no_increase_hook_max_steps_without_increase, 
-            min_steps = self.config.stop_if_no_increase_hook_min_steps)
+        with tf.Session() as session:
+            session.run(tf.global_variables_initializer())
 
-        return [hook1]
+            # run training
+            batch_size = self.batch_size
+            ce_vals = []
+            print(train_num_examples // batch_size)
+            for j in range(self.episode):
+                for i in range(train_num_examples // batch_size):
+                    batch_xs = self.train_images[i * batch_size:(i + 1) * batch_size, :]
+                    batch_ys = self.train_labels[i * batch_size:(i + 1) * batch_size, :]
+                    _, train_ce = session.run(
+                        [train_op, tf.reduce_mean(total_loss)], {
+                            x: batch_xs,
+                            y: batch_ys
+                        })
+                    ce_vals.append(train_ce)
+                    avg_train_ce = sum(ce_vals) / len(ce_vals)
+
+                    if i % 50 == 0 and i > 10:
+                        print('epoch:', j, ',step:', i, ', TRAIN CROSS ENTROPY: ' + str(avg_train_ce))
+                        # report mean validation loss
+                        ce_vals, conf_mxs, acc = self.evaluate(self.valid_images, self.valid_labels, confusion_matrix_op, 
+                                                                    total_loss, output, session,
+                                                                    x, y, batch_size, valid_num_examples)
+                        avg_test_ce = sum(ce_vals) / len(ce_vals)
+                        print('VALIDATION CROSS ENTROPY: ' + str(avg_test_ce))
+                        print('VALIDATION Accuracy     : ' + str(acc))
+                        # print('VALIDATION CONFUSION MATRIX:')
+                        # print(str(sum(conf_mxs)))
+
+            # report mean test loss
+            ce_vals, conf_mxs, acc = self.evaluate(self.test_images, self.test_labels, confusion_matrix_op, 
+                                                   total_loss, output, session,
+                                                   x, y, batch_size, test_num_examples)
+            avg_test_ce = sum(ce_vals) / len(ce_vals)
+            print('------------------------------')
+            print('TEST CROSS ENTROPY: ' + str(avg_test_ce))
+            print('TEST Accuracy     : ' + str(acc))
+            print('TEST CONFUSION MATRIX:')
+            print(str(sum(conf_mxs)))
+
+            saver.save(
+                session,
+                "homework_1_" + str(model_id) ,
+                global_step=global_step_tensor)
 
