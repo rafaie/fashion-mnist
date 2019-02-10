@@ -36,4 +36,7 @@ class BaseConfig(object):
         self.stop_if_no_increase_hook_run_every_secs = 120
         self.train_throttle_secs = 120
 
+        self.wit_hook = False
+
+
         
