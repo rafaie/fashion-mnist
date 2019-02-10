@@ -16,7 +16,7 @@ class FashionMnist:
 
         self.models=[self.create_model_0]
         self.model = None
-
+ 
     def show_dataset_size(self):
         print('-----------------------------------------------')
         print('self.train_images:', self.train_images.shape)
@@ -36,21 +36,21 @@ class FashionMnist:
                                 name='norm')
             drop = tf.layers.dropout(norm, rate=self.dropout_factor)                    
             hidden = tf.layers.dense(drop,
-                                    1500,
-                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                    800,
+                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
+                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
                                     activation=tf.nn.relu,
                                     name='hidden_layer2')
             hidden2 = tf.layers.dense(hidden,
-                                    1000,
-                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                    400,
+                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
+                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
                                     activation=tf.nn.relu,
                                     name='hidden_layer3')
             hidden3 = tf.layers.dense(hidden2,
-                                    500,
-                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
-                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=0.01),
+                                    200,
+                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
+                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
                                     activation=tf.nn.relu,
                                     name='hidden_layer4')
     
@@ -61,7 +61,9 @@ class FashionMnist:
         
         # define classification loss
         y = tf.placeholder(tf.float32, [None, 10], name='label')
-        total_loss = tf.nn.softmax_cross_entropy_with_logits_v2(labels=y, logits=output)
+        total = tf.nn.softmax_cross_entropy_with_logits_v2(labels=y, logits=output)
+        reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        total_loss = total + self.reg_constant * sum(reg_losses)
         return (output, total_loss, x, y)
 
         
@@ -90,15 +92,20 @@ class FashionMnist:
         
 
     def update_model_info(self, model_id=0):
-        self.episode = 10
+        self.model_path = "homework_1_" + str(model_id)
+        os.makedirs(self.model_path, exist_ok=True)
+
+        self.episode = 200
         if model_id == 1:
             self.model = self.models[0]
-            self.dropout_factor = 0.25
+            self.dropout_factor = 0.30
             self.learning_rate = 0.001
+            self.reg_constant = 0.01
         else:
             self.model = self.models[0]
-            self.dropout_factor = 0.5
+            self.dropout_factor = 0.30
             self.learning_rate = 0.001
+            self.reg_constant = 0.01
 
 
 
@@ -148,8 +155,21 @@ class FashionMnist:
                         avg_test_ce = sum(ce_vals) / len(ce_vals)
                         print('VALIDATION CROSS ENTROPY: ' + str(avg_test_ce))
                         print('VALIDATION Accuracy     : ' + str(acc))
-                        # print('VALIDATION CONFUSION MATRIX:')
-                        # print(str(sum(conf_mxs)))
+
+                        print(','.join(['MODEL_STATE', str(model_id), str(j), str(i), str(avg_train_ce), 
+                                        str(avg_test_ce), str(acc) ]))
+
+
+                if j % 5 == 0 and j > 1:
+                    saver.save(
+                            session,
+                            os.path.join(self.model_path, "homework_1_" + str(model_id)) ,
+                            global_step=global_step_tensor)
+                    saver.save(
+                            session,
+                            os.path.join(self.model_path, "homework_1"))
+                     
+
 
             # report mean test loss
             ce_vals, conf_mxs, acc = self.evaluate(self.test_images, self.test_labels, confusion_matrix_op, 
@@ -164,6 +184,9 @@ class FashionMnist:
 
             saver.save(
                 session,
-                "homework_1_" + str(model_id) ,
+                os.path.join(self.model_path, "homework_1_" + str(model_id)) ,
                 global_step=global_step_tensor)
+            saver.save(
+                session,
+                os.path.join(self.model_path, "homework_1"))
 

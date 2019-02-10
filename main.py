@@ -21,7 +21,7 @@ if __name__ == "__main__":
         type=str,
         default=0,
         help='rum the model id')
-    parser.add_argument('--batch_size', type=int, default=200)
+    parser.add_argument('--batch_size', type=int, default=400)
     args = parser.parse_args()
 
     m = FashionMnist(args.data_dir, args.batch_size)
