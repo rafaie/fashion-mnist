@@ -19,11 +19,11 @@ if __name__ == "__main__":
     parser.add_argument(
         '--model_id',
         type=str,
-        default=0,
+        default="00000",
         help='rum the model id')
-    parser.add_argument('--batch_size', type=int, default=400)
     args = parser.parse_args()
 
-    m = FashionMnist(args.data_dir, args.batch_size)
+    print(args.model_id)
+    m = FashionMnist(args.data_dir)
     m.show_dataset_size()
     m.train(model_id=args.model_id)

@@ -5,17 +5,25 @@ import numpy as np
 import tensorflow as tf
 from util import get_data2, get_dataset
 
+
+# Drop layer state
+DROP_STATE_NONE = 0
+DROP_STATE_BEGINING = 1
+DROP_STATE_MIDDLE = 2
+DROP_STATE_END = 3
+
+
 class FashionMnist:
-    def __init__(self, data_dir, batch_size):
+    def __init__(self, data_dir):
         self.data_dir = data_dir
-        self.batch_size = batch_size
         (self.train_images, self.train_labels,
          self.valid_images, self.valid_labels,
-         self.test_images, self.test_labels) = get_data2(data_dir, test_size=0.15, 
+         self.test_images, self.test_labels,
+         self.all_images, self.all_labels) = get_data2(data_dir, test_size=0.15, 
                                                         valid_size=0.20, need_valid=True)
 
-        self.models=[self.create_model_0]
         self.model = None
+    
  
     def show_dataset_size(self):
         print('-----------------------------------------------')
@@ -26,38 +34,62 @@ class FashionMnist:
         print('self.test_images:', self.test_images.shape)
         print('self.test_labels:', self.test_labels.shape)
 
+
     def create_model_0(self):
         tf.reset_default_graph()
 
         # specify the network
         x = tf.placeholder(tf.float32, [None, 784], name='input_placeholder')
-        with tf.name_scope('linear_model'):
-            norm  = tf.divide(x, tf.constant(255, tf.float32),
-                                name='norm')
-            drop = tf.layers.dropout(norm, rate=self.dropout_factor)                    
+        norm  = tf.divide(x, tf.constant(255, tf.float32), name='norm')
+
+        if self.drop_state == DROP_STATE_BEGINING:
+            drop = tf.layers.dropout(norm, rate=self.dropout_factor)
             hidden = tf.layers.dense(drop,
                                     800,
-                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
-                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
-                                    activation=tf.nn.relu,
+                                    kernel_regularizer=self.regularizer,
+                                    bias_regularizer=self.regularizer,
+                                    activation=self.activation,
                                     name='hidden_layer2')
-            hidden2 = tf.layers.dense(hidden,
+        else:
+           hidden = tf.layers.dense(norm,
+                                    800,
+                                    kernel_regularizer=self.regularizer,
+                                    bias_regularizer=self.regularizer,
+                                    activation=self.activation,
+                                    name='hidden_layer2')
+
+        if self.drop_state == DROP_STATE_MIDDLE:
+            drop = tf.layers.dropout(hidden, rate=self.dropout_factor)
+            hidden3 = tf.layers.dense(drop,
                                     400,
-                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
-                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
-                                    activation=tf.nn.relu,
-                                    name='hidden_layer3')
-            hidden3 = tf.layers.dense(hidden2,
-                                    200,
-                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
-                                    bias_regularizer=tf.contrib.layers.l2_regularizer(scale=self.reg_constant),
-                                    activation=tf.nn.relu,
+                                    kernel_regularizer=self.regularizer,
+                                    bias_regularizer=self.regularizer,
+                                    activation=self.activation,
                                     name='hidden_layer4')
-    
-            output = tf.layers.dense(hidden3,
+        else:
+            hidden3 = tf.layers.dense(hidden,
+                                    400,
+                                    kernel_regularizer=self.regularizer,
+                                    bias_regularizer=self.regularizer,
+                                    activation=self.activation,
+                                    name='hidden_layer4')
+
+        hidden5 = tf.layers.dense(hidden3,
+                                100,
+                                kernel_regularizer=self.regularizer,
+                                bias_regularizer=self.regularizer,
+                                activation=self.activation,
+                                name='hidden_layer6')
+        if self.drop_state == DROP_STATE_END:
+            drop = tf.layers.dropout(hidden5, rate=self.dropout_factor)
+            output = tf.layers.dense(drop,
+                                10,
+                                name='output_layer')
+        else:
+            output = tf.layers.dense(hidden5,
                                     10,
-                                    name='output')
-            tf.identity(output, name='output')
+                                    name='output_layer')
+        tf.identity(output, name='output')
         
         # define classification loss
         y = tf.placeholder(tf.float32, [None, 10], name='label')
@@ -66,6 +98,74 @@ class FashionMnist:
         total_loss = total + self.reg_constant * sum(reg_losses)
         return (output, total_loss, x, y)
 
+    def create_model_1(self):
+        tf.reset_default_graph()
+
+        # specify the network
+        x = tf.placeholder(tf.float32, [None, 784], name='input_placeholder')
+        norm  = tf.divide(x, tf.constant(255, tf.float32), name='norm')
+
+        if self.drop_state == DROP_STATE_BEGINING:
+            drop = tf.layers.dropout(norm, rate=self.dropout_factor)
+            hidden = tf.layers.dense(drop,
+                                    800,
+                                    kernel_regularizer=self.regularizer,
+                                    bias_regularizer=self.regularizer,
+                                    activation=self.activation,
+                                    name='hidden_layer2')
+        else:
+           hidden = tf.layers.dense(norm,
+                                    800,
+                                    kernel_regularizer=self.regularizer,
+                                    bias_regularizer=self.regularizer,
+                                    activation=self.activation,
+                                    name='hidden_layer2')
+
+        hidden2 = tf.layers.dense(hidden,
+                                400,
+                                kernel_regularizer=self.regularizer,
+                                bias_regularizer=self.regularizer,
+                                activation=self.activation,
+                                name='hidden_layer3')
+        if self.drop_state == DROP_STATE_MIDDLE:
+            drop = tf.layers.dropout(hidden2, rate=self.dropout_factor)
+            hidden3 = tf.layers.dense(drop,
+                                    400,
+                                    kernel_regularizer=self.regularizer,
+                                    bias_regularizer=self.regularizer,
+                                    activation=self.activation,
+                                    name='hidden_layer4')
+        else:
+            hidden3 = tf.layers.dense(hidden2,
+                                    400,
+                                    kernel_regularizer=self.regularizer,
+                                    bias_regularizer=self.regularizer,
+                                    activation=self.activation,
+                                    name='hidden_layer4')
+
+        hidden5 = tf.layers.dense(hidden3,
+                                100,
+                                kernel_regularizer=self.regularizer,
+                                bias_regularizer=self.regularizer,
+                                activation=self.activation,
+                                name='hidden_layer6')
+        if self.drop_state == DROP_STATE_END:
+            drop = tf.layers.dropout(hidden5, rate=self.dropout_factor)
+            output = tf.layers.dense(drop,
+                                10,
+                                name='output_layer')
+        else:
+            output = tf.layers.dense(hidden5,
+                                    10,
+                                    name='output_layer')
+        tf.identity(output, name='output')
+        
+        # define classification loss
+        y = tf.placeholder(tf.float32, [None, 10], name='label')
+        total = tf.nn.softmax_cross_entropy_with_logits_v2(labels=y, logits=output)
+        reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        total_loss = total + self.reg_constant * sum(reg_losses)
+        return (output, total_loss, x, y)
         
 
 
@@ -89,24 +189,33 @@ class FashionMnist:
             conf_mxs.append(conf_matrix)
             c_preds += c_pred_val.tolist()
         return (ce_vals, conf_mxs, sum(c_preds)/len(c_preds))
+    
+    
+    def init_model_base_params(self):
+        self.dropout_factor = 0.3
+        self.reg_constant = 0.01
+        self.activation = tf.nn.relu
+        self.episodes = [40, 20]
         
+        self.models=[self.create_model_0, self.create_model_1]
+        self.learning_rates = [0.0001, 0.00001]
+        self.drop_states = [DROP_STATE_NONE, DROP_STATE_BEGINING, DROP_STATE_MIDDLE, DROP_STATE_END]
+        self.batch_sizes = [400, 100]
+        self.regularizers = [None, tf.contrib.layers.l2_regularizer(scale=self.reg_constant)]
 
-    def update_model_info(self, model_id=0):
+
+
+    def update_model_info(self, model_id="9999999"):
         self.model_path = "homework_1_" + str(model_id)
         os.makedirs(self.model_path, exist_ok=True)
 
-        self.episode = 200
-        if model_id == 1:
-            self.model = self.models[0]
-            self.dropout_factor = 0.30
-            self.learning_rate = 0.001
-            self.reg_constant = 0.01
-        else:
-            self.model = self.models[0]
-            self.dropout_factor = 0.30
-            self.learning_rate = 0.001
-            self.reg_constant = 0.01
-
+        self.init_model_base_params()
+        self.model = self.models[int(model_id[-1])]
+        self.learning_rate = self.learning_rates[int(model_id[-2])]
+        self.regularizer = self.regularizers[int(model_id[-3])]
+        self.drop_state = self.drop_states[int(model_id[-4])]
+        self.batch_size = self.batch_sizes[int(model_id[-5])]
+        self.episode = self.episodes[int(model_id[-5])]
 
 
     def train(self, model_id=0):
@@ -125,7 +234,7 @@ class FashionMnist:
             'global_step', trainable=False, shape=[], initializer=tf.zeros_initializer)
         optimizer = tf.train.AdamOptimizer(self.learning_rate)
         train_op = optimizer.minimize(total_loss, global_step=global_step_tensor)
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(max_to_keep=100)
 
         with tf.Session() as session:
             session.run(tf.global_variables_initializer())
@@ -156,11 +265,11 @@ class FashionMnist:
                         print('VALIDATION CROSS ENTROPY: ' + str(avg_test_ce))
                         print('VALIDATION Accuracy     : ' + str(acc))
 
-                        print(','.join(['MODEL_STATE', str(model_id), str(j), str(i), str(avg_train_ce), 
+                        print(','.join(['TRAIN_PROGRESS', str(model_id), str(j), str(i), str(avg_train_ce), 
                                         str(avg_test_ce), str(acc) ]))
 
 
-                if j % 5 == 0 and j > 1:
+                if j % 3 == 0 and j > 1:
                     saver.save(
                             session,
                             os.path.join(self.model_path, "homework_1_" + str(model_id)) ,
@@ -168,6 +277,28 @@ class FashionMnist:
                     saver.save(
                             session,
                             os.path.join(self.model_path, "homework_1"))
+                    ce_vals, conf_mxs, acc = self.evaluate(self.test_images, self.test_labels, confusion_matrix_op, 
+                                        total_loss, output, session,
+                                        x, y, batch_size, test_num_examples)
+                    avg_test_ce = sum(ce_vals) / len(ce_vals)
+                    print('------------------------------')
+                    print('TEST CROSS ENTROPY: ' + str(avg_test_ce))
+                    print('TEST Accuracy     : ' + str(acc))
+
+                    ce_vals2, conf_mxs2, acc2 = self.evaluate(self.all_images, self.all_labels, confusion_matrix_op, 
+                                        total_loss, output, session,
+                                        x, y, batch_size, test_num_examples)
+                    avg_test_ce2 = sum(ce_vals2) / len(ce_vals2)
+                    print('------------------------------')
+                    print('GENERAL CROSS ENTROPY: ' + str(avg_test_ce2))
+                    print('GENERAL Accuracy     : ' + str(acc2))
+
+
+                    print(','.join(['TEST_PROGRESS', str(model_id), str(j), str(i), str(avg_train_ce), 
+                                        str(avg_test_ce), str(acc),
+                                        str(avg_test_ce2), str(acc2) ]))
+
+
                      
 
 
@@ -181,6 +312,19 @@ class FashionMnist:
             print('TEST Accuracy     : ' + str(acc))
             print('TEST CONFUSION MATRIX:')
             print(str(sum(conf_mxs)))
+            ce_vals2, conf_mxs2, acc2 = self.evaluate(self.all_images, self.all_labels, confusion_matrix_op, 
+                                total_loss, output, session,
+                                x, y, batch_size, test_num_examples)
+            avg_test_ce2 = sum(ce_vals2) / len(ce_vals2)
+            print('------------------------------')
+            print('GENERAL CROSS ENTROPY: ' + str(avg_test_ce2))
+            print('GENERAL Accuracy     : ' + str(acc2))
+            print('GENERAL CONFUSION MATRIX:')
+            print(str(sum(conf_mxs2)))
+
+            print(','.join(['TEST_PROGRESS', str(model_id), str(j), str(i), str(avg_train_ce), 
+                                str(avg_test_ce), str(acc),
+                                str(avg_test_ce2), str(acc2) ]))
 
             saver.save(
                 session,
