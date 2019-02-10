@@ -102,4 +102,5 @@ def get_data2(data_dir='.data/', test_size = 0.2, valid_size = 0.15, need_valid=
 
      return (train_images, train_labels,
                valid_images, valid_labels,
-               test_images, test_labels)
+               test_images, test_labels,
+               images, labels)
